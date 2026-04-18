@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+*.mp3
+*.wav
+*.m4a
+*.webm
+
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+
+vox1_indian/
+# Environment secrets – never commit
+.env

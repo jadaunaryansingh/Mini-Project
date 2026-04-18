@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start VoxGuard API",
+			"type": "shell",
+			"command": "\"c:\\Users\\ARYAN SINGH JADAUN\\Documents\\Projects@Me\\Voice Authentication via DL\\.venv\\Scripts\\python.exe\" api.py",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

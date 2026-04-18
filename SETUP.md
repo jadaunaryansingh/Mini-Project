@@ -1,0 +1,45 @@
+# Setup Guide — VoxGuard
+
+## Prerequisites
+
+- Python 3.10+
+- Node/npm (optional, for tooling)
+
+## Steps
+
+1. **Virtual environment**
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate   # Windows
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Firebase**
+   - Create a project at [Firebase Console](https://console.firebase.google.com)
+   - Enable Authentication (Email/Password or desired method)
+   - Copy config values into a `.env` file (see `.env.example` if present)
+
+4. **Run API**
+   ```bash
+   uvicorn api:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+5. **Open app**
+   - Visit `http://localhost:8000` or open `index.html` and point it to the API URL.
+
+## Environment variables
+
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+- `FIREBASE_MEASUREMENT_ID`
+- `FIREBASE_DATABASE_URL`
+
+Do not commit `.env`; it is listed in `.gitignore`.
