@@ -1874,10 +1874,12 @@ let activeUser = null;
 const sessionEventTrackedForUser = new Set();
 
 window.persistUserEvent = async function(eventType, payload = {}) {
-  if(!activeUser){
-    return;
+  if(!activeUser) return;
+  try {
+    await persistUserHistory(activeUser, eventType, payload);
+  } catch(err) {
+    console.warn(`[DB] ${eventType}: ${err.message}`);
   }
-  await persistUserHistory(activeUser, eventType, payload);
 };
 
 function getHistoryMessage(entry){
@@ -1969,15 +1971,18 @@ await onUserStateChanged(async user => {
 
       await showRecentHistoryInLog(user);
     } catch(err){
-      log(`Realtime DB sync issue: ${err.message || err}`, 'warn');
+      const msg = err.message || String(err);
+      if(msg.includes('Permission denied')){
+        log('Database rules not configured', 'warn');
+      } else {
+        log('Database sync issue: ' + msg, 'warn');
+      }
     }
 
     if(!appInitialized){
       appInitialized = true;
       log('VoxGuard initialized','ok');
-      log('CNN model: 5×ConvBlock + BatchNorm + Dropout + FC-512','info');
-      log('Mode: Speaker Identification','info');
-      log('Threshold: 0.60 (adaptive)  |  Embedding: 512-d','info');
+      log('Model loaded','info');
       loadSpeakers();
     }
   } else {
@@ -2055,7 +2060,7 @@ document.getElementById('signout-btn').addEventListener('click', async ()=>{
     try{
       await persistUserHistory(activeUser, 'session_ended', {});
     } catch(err){
-      log(`Failed to save sign-out event: ${err.message || err}`, 'warn');
+      console.warn('Failed to save session end:', err.message);
     }
   }
   await signOut();
