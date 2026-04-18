@@ -1,168 +1,173 @@
 # API Reference
 
-Base URL: `http://localhost:8011`
+Base URL: `http://localhost:8081`
+
+Interactive docs:
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/openapi.json`
+
+## Authentication and Authorization
+
+Protected endpoints require Firebase ID token in header:
+
+`Authorization: Bearer <firebase_id_token>`
+
+Behavior:
+- `AUTH_REQUIRED=true` (default): token required on protected endpoints.
+- `AUTH_REQUIRED=false`: development mode, backend bypasses auth checks.
+
+Authorization:
+- `/authenticate` and `/verify`: any authenticated user.
+- `/enroll`: admin only (`role=admin/owner` custom claim OR allowlist via `ADMIN_EMAILS`/`ADMIN_UIDS`).
 
 ## Endpoints
 
 ### GET /status
 Returns API health and loaded speakers.
 
-```
+```json
 {
   "status": "online",
   "device": "cpu",
-  "speakers": ["Aamir_Khan", "Ajay_Devgn", ...],
+  "speakers": ["Aamir_Khan", "Ajay_Devgn"],
   "num_speakers": 23
 }
 ```
 
 ### GET /firebase-config
-Returns Firebase config for frontend.
-
-```json
-{
-  "apiKey": "...",
-  "projectId": "...",
-  "databaseURL": "..."
-}
-```
+Returns frontend Firebase web config.
 
 ### GET /speakers
-List all enrolled speakers.
+List enrolled speakers.
+
+### GET /admin
+Serves the admin dashboard UI.
+
+### GET /admin/feedbacks
+Admin-only feedback audit stream used by admin dashboard.
+
+Query params:
+- `limit` (default 200, max 1000)
+- `endpoint` (`all` | `authenticate` | `verify`)
+- `outcome` (`all` | `success` | `failure`)
+- `user_email` (contains filter)
+
+Response:
 
 ```json
 {
-  "speakers": ["Aamir_Khan", "Ajay_Devgn", ...],
-  "count": 23
+  "items": [
+    {
+      "timestamp": "2026-04-18T10:35:12.100000+00:00",
+      "endpoint": "verify",
+      "outcome": "failure",
+      "user": {"email": "admin@example.com", "role": "admin"},
+      "feedback": {"summary": "Denied because ..."}
+    }
+  ],
+  "count": 1,
+  "total_available": 120,
+  "storage": "firebase"
 }
 ```
 
+Persistence behavior:
+- If Firebase Realtime Database is configured (`FIREBASE_DATABASE_URL` + Firebase Admin credentials), events are persisted under `admin_feedback_audit/events` and survive server restarts.
+- If not configured, backend falls back to in-memory event buffer.
+
+### GET /admin/feedbacks/export.csv
+Admin-only CSV export of filtered feedback audit records.
+
+Accepts the same query parameters as `/admin/feedbacks`:
+- `limit`
+- `endpoint`
+- `outcome`
+- `user_email`
+
+Returns downloadable CSV with fields including timestamp, endpoint, outcome, users, similarity metrics, reasons, and next steps.
+
 ### POST /authenticate
-Verify speaker voice.
+Verify a claimed speaker against uploaded voice sample.
 
-**Parameters:**
-- `audio` (file) - Audio file
-- `speaker` (string) - Speaker name to verify
-- `threshold` (float, default 0.70) - Confidence threshold
+Form fields:
+- `audio`: audio file
+- `speaker`: claimed speaker name
+- `threshold` (optional, default `0.70`)
 
-**Response:**
+Response includes detailed decision feedback:
+
 ```json
 {
   "success": true,
-  "authenticated": true,
-  "similarity": 0.8234,
+  "authenticated": false,
+  "similarity": 0.6123,
   "claimed_speaker": "Aamir_Khan",
-  "decision": "AUTHENTICATED ✅",
-  "confidence": 87.45
-}
-```
-
-Error:
-```json
-{
-  "detail": "Speaker 'Unknown' not in database"
+  "effective_threshold": 0.7,
+  "margin_vs_next": 0.021,
+  "confidence": 42.1,
+  "feedback": {
+    "summary": "Denied because the voiceprint did not pass the confidence threshold.",
+    "reasons": [
+      "Similarity 0.6123 is below threshold 0.7000",
+      "Closest known speaker is Ajay_Devgn"
+    ],
+    "next_steps": [
+      "Retry in a quieter environment",
+      "Record 3-5 seconds with consistent speaking volume"
+    ],
+    "decision_factors": {
+      "threshold_gap": -0.0877,
+      "margin_vs_next": 0.021,
+      "closest_speaker": "Ajay_Devgn"
+    }
+  }
 }
 ```
 
 ### POST /verify
-Identify speaker from voice (no name needed).
+Identify speaker from uploaded voice sample (open-set identification).
 
-**Parameters:**
-- `audio` (file) - Audio file
-- `threshold` (float, default 0.60) - Confidence threshold
+Form fields:
+- `audio`: audio file
+- `threshold` (optional, default `0.60`)
 
-**Response:**
-```json
-{
-  "success": true,
-  "identified": true,
-  "speaker": "Aamir_Khan",
-  "similarity": 0.8234,
-  "top_matches": [
-    {"speaker": "Aamir_Khan", "similarity": 0.8234, "confidence": 82.34},
-    {"speaker": "Ajay_Devgn", "similarity": 0.7413, "confidence": 74.13}
-  ],
-  "message": "Identified as Aamir_Khan",
-  "confidence": 82.34
-}
-```
+Response includes `top_matches` and `feedback`.
 
 ### POST /enroll
-Add new speaker to database.
+Add a new speaker embedding to database.
 
-**Parameters:**
-- `audio` (file) - Audio file
-- `speaker_name` (string) - New speaker name (unique)
+Form fields:
+- `audio`: audio file
+- `speaker_name`: new unique speaker identifier
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Speaker 'NewActor' enrolled successfully",
-  "speaker": "NewActor",
-  "total_speakers": 24
-}
-```
+Requires admin privileges.
 
-Error:
-```json
-{
-  "detail": "Speaker 'Aamir_Khan' already exists in database"
-}
-```
+## Common Error Codes
 
-## Error Codes
-
-| Code | Message | Fix |
-|------|---------|-----|
-| 400 | Speaker not in database | Check spelling, enroll first |
-| 400 | File must be audio | Use .wav, .mp3, .m4a |
-| 400 | Speaker name required | Provide speaker_name |
-| 400 | Speaker already exists | Use different name |
-| 500 | Processing error | Check server logs |
-
-## Examples
-
-### cURL
-```bash
-curl http://localhost:8011/status
-
-curl -X POST http://localhost:8011/authenticate \
-  -F "audio=@recording.wav" \
-  -F "speaker=Aamir_Khan" \
-  -F "threshold=0.70"
-```
-
-### Python
-```python
-import requests
-
-with open('recording.wav', 'rb') as f:
-    r = requests.post(
-        'http://localhost:8011/authenticate',
-        files={'audio': f},
-        data={'speaker': 'Aamir_Khan', 'threshold': 0.70}
-    )
-    print(r.json())
-```
+| Code | Meaning |
+|------|---------|
+| 400 | Validation/business rule error |
+| 401 | Missing/invalid Firebase token |
+| 403 | Authenticated but not authorized (admin required) |
+| 422 | Missing required form field |
+| 500 | Internal processing error |
+| 503 | Firebase Admin not configured on backend |
 
 ## Environment Variables
 
-```
-FIREBASE_API_KEY
-FIREBASE_AUTH_DOMAIN
-FIREBASE_PROJECT_ID
-FIREBASE_STORAGE_BUCKET
-FIREBASE_MESSAGING_SENDER_ID
-FIREBASE_APP_ID
-FIREBASE_MEASUREMENT_ID
-FIREBASE_DATABASE_URL
-```
+Core:
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+- `FIREBASE_MEASUREMENT_ID`
+- `FIREBASE_DATABASE_URL`
 
-## Run
-
-```bash
-cd Mini-Project
-.\.venv\Scripts\Activate.ps1
-uvicorn api:app --host 127.0.0.1 --port 8011 --reload
-```
+Backend auth:
+- `AUTH_REQUIRED` (`true`/`false`)
+- `FIREBASE_SERVICE_ACCOUNT_PATH` (path to Firebase Admin JSON)
+- `FIREBASE_SERVICE_ACCOUNT_JSON` (raw JSON string alternative)
+- `ADMIN_EMAILS` (comma-separated)
+- `ADMIN_UIDS` (comma-separated)

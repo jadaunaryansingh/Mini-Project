@@ -959,6 +959,51 @@ footer{
   transition:all .2s;
 }
 .btn-signout:hover{border-color:var(--r);color:var(--r)}
+
+.admin-link{
+  padding:6px 12px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  text-decoration:none;
+  color:var(--cyan);
+  font-family:var(--font-mono);
+  font-size:.68rem;
+  letter-spacing:.1em;
+  display:none;
+}
+.admin-link.visible{display:inline-flex;align-items:center}
+.admin-link:hover{border-color:var(--green);color:var(--green)}
+
+.user-role-pill{
+  padding:6px 10px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  font-family:var(--font-hd);
+  font-size:.55rem;
+  letter-spacing:.16em;
+  color:var(--dim);
+  text-transform:uppercase;
+}
+.user-role-pill.admin{
+  border-color:var(--g);
+  color:var(--g);
+  box-shadow:0 0 10px #00ff9d33;
+}
+
+.quality-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:14px;
+}
+.quality-grid{display:grid;gap:10px}
+.quality-item{display:grid;grid-template-columns:110px 1fr 52px;gap:10px;align-items:center}
+.quality-name{font-family:var(--font-mono);font-size:.68rem;color:var(--dim);letter-spacing:.1em}
+.quality-bar{height:6px;background:var(--border);border-radius:999px;overflow:hidden}
+.quality-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--r),var(--a),var(--g));transition:width .2s ease}
+.quality-val{font-family:var(--font-mono);font-size:.7rem;color:var(--c);text-align:right}
+.quality-status{margin-top:12px;font-family:var(--font-mono);font-size:.72rem;color:var(--text)}
+.quality-tip{margin-top:6px;font-family:var(--font-mono);font-size:.7rem;color:var(--a)}
 </style>
 </head>
 <body>
@@ -974,6 +1019,8 @@ footer{
 
 <div class="login-user-bar" id="user-bar">
   <span class="login-user-name" id="user-name"></span>
+  <span class="user-role-pill" id="user-role">USER</span>
+  <a class="admin-link" id="admin-link" href="/admin">ADMIN DASHBOARD</a>
   <button class="btn-signout" id="signout-btn">SIGN OUT</button>
 </div>
 
@@ -1097,6 +1144,31 @@ footer{
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
           START RECORDING
         </button>
+      </div>
+
+      <div class="field">
+        <label>LIVE ENROLLMENT QUALITY</label>
+        <div class="quality-card" id="quality-card">
+          <div class="quality-grid">
+            <div class="quality-item">
+              <span class="quality-name">LOUDNESS</span>
+              <div class="quality-bar"><div class="quality-fill" id="q-loudness"></div></div>
+              <span class="quality-val" id="q-loudness-val">0%</span>
+            </div>
+            <div class="quality-item">
+              <span class="quality-name">CLIP SAFETY</span>
+              <div class="quality-bar"><div class="quality-fill" id="q-clipping"></div></div>
+              <span class="quality-val" id="q-clipping-val">100%</span>
+            </div>
+            <div class="quality-item">
+              <span class="quality-name">VOICE ACTIVITY</span>
+              <div class="quality-bar"><div class="quality-fill" id="q-activity"></div></div>
+              <span class="quality-val" id="q-activity-val">0%</span>
+            </div>
+          </div>
+          <div class="quality-status" id="q-status">Idle. Start recording to get live quality guidance.</div>
+          <div class="quality-tip" id="q-tip">Tip: Speak steadily 8-15 cm from the mic for 3-5 seconds.</div>
+        </div>
       </div>
 
       <button class="btn btn-primary" id="identify-btn">
@@ -1240,6 +1312,17 @@ function trackUserHistory(eventType, payload = {}) {
     });
 }
 
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  if (typeof window.getVoxguardAccessToken === 'function') {
+    const token = await window.getVoxguardAccessToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+  return fetch(path, { ...options, headers });
+}
+
 const cursor    = document.getElementById('cursor');
 const cursorDot = document.getElementById('cursor-dot');
 let   mouseX=0, mouseY=0, cX=0, cY=0;
@@ -1329,6 +1412,10 @@ const wCtx    = wCanvas.getContext('2d');
 let waveData  = new Float32Array(200).fill(0);
 let recording = false;
 let analyser, mediaStream;
+const qualityState = {
+  rmsHistory: [],
+  speechRatioHistory: [],
+};
 
 function resizeWave(){
   wCanvas.width  = wCanvas.offsetWidth  * devicePixelRatio;
@@ -1347,6 +1434,7 @@ function drawWave(){
     analyser.getByteTimeDomainData(buf);
     waveData = new Float32Array(buf.length);
     for(let i=0;i<buf.length;i++) waveData[i]=(buf[i]-128)/128;
+    updateLiveQuality(waveData);
   } else {
     const t = Date.now()/1200;
     for(let i=0;i<waveData.length;i++){
@@ -1369,6 +1457,71 @@ function drawWave(){
   requestAnimationFrame(drawWave);
 }
 drawWave();
+
+function setQualityBar(baseId, value){
+  const clamped = Math.max(0, Math.min(100, value));
+  document.getElementById(baseId).style.width = `${clamped}%`;
+  document.getElementById(`${baseId}-val`).textContent = `${Math.round(clamped)}%`;
+}
+
+function resetLiveQuality(){
+  qualityState.rmsHistory = [];
+  qualityState.speechRatioHistory = [];
+  setQualityBar('q-loudness', 0);
+  setQualityBar('q-clipping', 100);
+  setQualityBar('q-activity', 0);
+  document.getElementById('q-status').textContent = 'Idle. Start recording to get live quality guidance.';
+  document.getElementById('q-tip').textContent = 'Tip: Speak steadily 8-15 cm from the mic for 3-5 seconds.';
+}
+
+function updateLiveQuality(frame){
+  let sumSq = 0;
+  let peak = 0;
+  let activeCount = 0;
+  for(let i = 0; i < frame.length; i++){
+    const v = Math.abs(frame[i]);
+    sumSq += frame[i] * frame[i];
+    if(v > peak) peak = v;
+    if(v > 0.035) activeCount++;
+  }
+
+  const rms = Math.sqrt(sumSq / frame.length);
+  const speechRatio = activeCount / frame.length;
+  qualityState.rmsHistory.push(rms);
+  qualityState.speechRatioHistory.push(speechRatio);
+  if(qualityState.rmsHistory.length > 45) qualityState.rmsHistory.shift();
+  if(qualityState.speechRatioHistory.length > 45) qualityState.speechRatioHistory.shift();
+
+  const loudnessScore = Math.max(0, Math.min(100, (rms / 0.18) * 100));
+  const clippingPenalty = peak > 0.92 ? (peak - 0.92) * 1400 : 0;
+  const clippingScore = Math.max(0, 100 - clippingPenalty);
+  const activityScore = Math.max(0, Math.min(100, speechRatio * 170));
+
+  setQualityBar('q-loudness', loudnessScore);
+  setQualityBar('q-clipping', clippingScore);
+  setQualityBar('q-activity', activityScore);
+
+  const stableEnough = loudnessScore > 35 && clippingScore > 75 && activityScore > 38;
+  let status = 'Collecting signal...';
+  let tip = 'Keep your mic at fixed distance and avoid background fans.';
+
+  if (clippingScore < 65) {
+    status = 'Signal clipping detected';
+    tip = 'Move farther from the microphone or lower your speaking volume.';
+  } else if (loudnessScore < 30) {
+    status = 'Signal is too quiet';
+    tip = 'Move closer to the mic and speak clearly with steady loudness.';
+  } else if (activityScore < 30) {
+    status = 'Low voice activity';
+    tip = 'Speak continuously for at least 3 seconds without long pauses.';
+  } else if (stableEnough) {
+    status = 'Enrollment quality looks good';
+    tip = 'You can stop recording now and submit this sample.';
+  }
+
+  document.getElementById('q-status').textContent = status;
+  document.getElementById('q-tip').textContent = `Tip: ${tip}`;
+}
 
 const sCanvas = document.getElementById('spec-canvas');
 const sCtx    = sCanvas.getContext('2d', { willReadFrequently: true });
@@ -1430,7 +1583,7 @@ const COLORS = ['#00e5ff','#00ff9d','#a855f7','#fbbf24','#ff2d6e','#34d399'];
 async function loadSpeakers(){
   let speakers = [];
   try {
-    const res = await fetch(`${API_BASE}/speakers`);
+    const res = await apiFetch(`${API_BASE}/speakers`);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     speakers = data.speakers || [];
@@ -1525,6 +1678,7 @@ recordBtn.addEventListener('click', async ()=>{
         toast('Recording ready!');
       };
       mediaRecorder.start();
+      resetLiveQuality();
       recording = true;
       recordBtn.classList.add('recording');
       recordBtn.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> STOP RECORDING`;
@@ -1544,6 +1698,7 @@ recordBtn.addEventListener('click', async ()=>{
     recordBtn.classList.remove('recording');
     recordBtn.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> START RECORDING`;
     recIndic.classList.remove('active');
+      document.getElementById('q-status').textContent = 'Recording complete. Review quality bars before submitting.';
     log('Recording stopped','info');
   }
 });
@@ -1573,7 +1728,7 @@ identifyBtn.addEventListener('click', async ()=>{
   try {
     const fd = new FormData();
     fd.append('audio', uploadedFile);
-    const res = await fetch(`${API_BASE}/verify`, {method:'POST', body:fd});
+    const res = await apiFetch(`${API_BASE}/verify`, {method:'POST', body:fd});
     if(!res.ok){
       const err = await res.json();
       throw new Error(err.detail || 'HTTP '+res.status);
@@ -1670,6 +1825,9 @@ function showIdentificationResult(r){
     chipSta.style.color  = 'var(--g)';
 
     log(`Speaker identified: ${r.speaker} (sim=${sim.toFixed(4)})`, 'ok');
+    if(r.feedback?.summary){
+      log(`Decision summary: ${r.feedback.summary}`, 'info');
+    }
     toast(`✅ Identified as ${r.speaker}`, '');
     launchParticles();
 
@@ -1717,6 +1875,9 @@ function showIdentificationResult(r){
     chipSta.style.color  = 'var(--a)';
 
     log(`No match found (closest: ${r.closest_speaker||'unknown'}, sim=${sim.toFixed(4)})`, 'warn');
+    if(r.feedback?.summary){
+      log(`Decision summary: ${r.feedback.summary}`, 'warn');
+    }
     toast('No matching speaker - Add to database', 'error');
     
     setTimeout(()=>showEnrollmentModal(r), 600);
@@ -1805,7 +1966,7 @@ enrollSubmitBtn.addEventListener('click', async ()=>{
     fd.append('audio', currentAudioFile);
     fd.append('speaker_name', speakerName);
     
-    const res = await fetch(`${API_BASE}/enroll`, {method:'POST', body:fd});
+    const res = await apiFetch(`${API_BASE}/enroll`, {method:'POST', body:fd});
     
     if(!res.ok){
       const err = await res.json();
@@ -1860,7 +2021,7 @@ document.addEventListener('keydown', e=>{
 </script>
 
 <script type="module">
-import { signUp, signIn, signOut, signInWithGoogle, onUserStateChanged, resetPassword }
+import { signUp, signIn, signOut, signInWithGoogle, onUserStateChanged, resetPassword, getCurrentUser }
   from "/firebase/firebase-auth.js";
 import { ensureUserProfile, persistUserHistory, getRecentUserHistory }
   from "/firebase/firebase-db.js";
@@ -1869,9 +2030,37 @@ const overlay    = document.getElementById('login-overlay');
 const mainApp    = document.getElementById('main-app');
 const userBar    = document.getElementById('user-bar');
 const userNameEl = document.getElementById('user-name');
+const userRoleEl = document.getElementById('user-role');
+const adminLinkEl = document.getElementById('admin-link');
 const loginErr   = document.getElementById('login-error');
 let activeUser = null;
 const sessionEventTrackedForUser = new Set();
+const tokenCache = { token: null, expMs: 0 };
+
+function parseJwt(token){
+  try {
+    const payloadPart = token.split('.')[1];
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+  } catch (_err) {
+    return {};
+  }
+}
+
+window.getVoxguardAccessToken = async function(forceRefresh = false){
+  const user = activeUser || await getCurrentUser();
+  if(!user) return null;
+
+  const now = Date.now();
+  if(forceRefresh || !tokenCache.token || (tokenCache.expMs && now > tokenCache.expMs - 45000)){
+    const token = await user.getIdToken(forceRefresh);
+    const parsed = parseJwt(token);
+    tokenCache.token = token;
+    tokenCache.expMs = Number(parsed.exp || 0) * 1000;
+  }
+  return tokenCache.token;
+};
 
 window.persistUserEvent = async function(eventType, payload = {}) {
   if(!activeUser) return;
@@ -1952,6 +2141,13 @@ await onUserStateChanged(async user => {
     userBar.classList.add('visible');
     userNameEl.textContent = (user.displayName || user.email || 'Operator').toUpperCase();
 
+    const idToken = await window.getVoxguardAccessToken(true);
+    const tokenPayload = parseJwt(idToken || '');
+    const role = String(tokenPayload.role || 'user').toLowerCase();
+    userRoleEl.textContent = role.toUpperCase();
+    userRoleEl.classList.toggle('admin', role === 'admin' || role === 'owner');
+    adminLinkEl.classList.toggle('visible', role === 'admin' || role === 'owner');
+
     try {
       await ensureUserProfile(user);
 
@@ -1987,6 +2183,9 @@ await onUserStateChanged(async user => {
     }
   } else {
     activeUser = null;
+    tokenCache.token = null;
+    tokenCache.expMs = 0;
+    adminLinkEl.classList.remove('visible');
     overlay.classList.remove('hidden');
     mainApp.style.display = 'none';
     userBar.classList.remove('visible');

@@ -42,4 +42,23 @@
 - `FIREBASE_MEASUREMENT_ID`
 - `FIREBASE_DATABASE_URL`
 
+Backend authentication and authorization:
+
+- `AUTH_REQUIRED=true`
+- `FIREBASE_SERVICE_ACCOUNT_PATH=C:\\path\\to\\serviceAccountKey.json`
+- `ADMIN_EMAILS=admin1@example.com,admin2@example.com`
+- `ADMIN_UIDS=uid_1,uid_2`
+
+Notes:
+- For production, keep `AUTH_REQUIRED=true`.
+- For local testing without Firebase Admin, set `AUTH_REQUIRED=false`.
+- `FIREBASE_SERVICE_ACCOUNT_JSON` can be used instead of file path when deploying via secret manager.
+
+## Verify end-to-end security
+
+1. Sign in from UI with Firebase.
+2. Confirm protected calls succeed (`/verify`, `/authenticate`).
+3. Confirm enrollment requires admin role (`/enroll` should return 403 for non-admin).
+4. Open `/docs` to inspect protected endpoints and payload contracts.
+
 Do not commit `.env`; it is listed in `.gitignore`.

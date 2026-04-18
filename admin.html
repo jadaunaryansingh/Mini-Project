@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VoxGuard Admin - Feedback Monitor</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#020912;
+  --surface:#071327;
+  --card:#0b1932;
+  --border:#13335a;
+  --cyan:#00e5ff;
+  --green:#00ff9d;
+  --amber:#fbbf24;
+  --red:#ff2d6e;
+  --text:#bed7f0;
+  --dim:#5a7da0;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:'Exo 2',sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(1200px 500px at 80% -20%, #0d2850 0%, transparent 55%),
+    radial-gradient(1000px 500px at -10% 0%, #0b2f3d 0%, transparent 50%),
+    var(--bg);
+}
+header{
+  padding:24px 28px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  position:sticky;
+  top:0;
+  z-index:5;
+  backdrop-filter:blur(6px);
+  background:rgba(2,9,18,.85);
+}
+.brand h1{
+  margin:0;
+  font-family:'Orbitron',sans-serif;
+  letter-spacing:.12em;
+  font-size:1.2rem;
+  color:var(--cyan);
+}
+.brand p{
+  margin:6px 0 0;
+  color:var(--dim);
+  font-family:'Share Tech Mono',monospace;
+  font-size:.78rem;
+}
+.user-meta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-family:'Share Tech Mono',monospace;
+  font-size:.72rem;
+}
+.pill{
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:6px 10px;
+  color:var(--dim);
+}
+.pill.admin{border-color:var(--green); color:var(--green)}
+main{padding:20px 28px 34px; max-width:1320px; margin:0 auto}
+.grid{display:grid; gap:16px}
+.metrics{grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); margin-bottom:16px}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:16px;
+}
+.metric-label{font-family:'Share Tech Mono',monospace; color:var(--dim); font-size:.72rem; letter-spacing:.1em}
+.metric-value{margin-top:8px; font-family:'Orbitron',sans-serif; font-size:1.5rem; color:var(--cyan)}
+.filters{
+  display:grid;
+  grid-template-columns: 170px 170px 1fr 110px 120px 130px 130px;
+  gap:10px;
+  align-items:end;
+}
+@media (max-width:980px){
+  .filters{grid-template-columns:1fr 1fr;}
+}
+.field label{
+  display:block;
+  margin-bottom:6px;
+  color:var(--dim);
+  font-size:.68rem;
+  font-family:'Share Tech Mono',monospace;
+  letter-spacing:.1em;
+}
+.field input,.field select,button{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:8px;
+  padding:10px 12px;
+  font-family:'Share Tech Mono',monospace;
+}
+button{cursor:pointer}
+button.primary{
+  background:linear-gradient(135deg,#0f4364,#0a7ea8);
+  border-color:#0c99c9;
+}
+button.secondary{
+  background:var(--surface);
+}
+button:disabled{opacity:.5; cursor:not-allowed}
+.list{margin-top:14px; display:grid; gap:12px}
+.feedback-item{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.badge{font-family:'Share Tech Mono',monospace; font-size:.65rem; padding:4px 8px; border-radius:999px; border:1px solid var(--border); color:var(--dim)}
+.badge.success{border-color:#1a8a5f; color:var(--green)}
+.badge.failure{border-color:#8a1a47; color:var(--red)}
+.badge.endpoint{color:var(--cyan); border-color:#0d6c8f}
+.title{margin:10px 0 0; font-weight:700; color:var(--text)}
+.sub{margin:8px 0 0; color:var(--dim); font-size:.84rem}
+.section{margin-top:12px}
+.section h4{margin:0 0 8px; font-size:.8rem; color:var(--amber); font-family:'Share Tech Mono',monospace; letter-spacing:.06em}
+.section ul{margin:0; padding-left:18px; color:var(--text); font-size:.86rem}
+.factors{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px}
+.factor{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px}
+.factor b{display:block; color:var(--dim); font-size:.7rem; font-family:'Share Tech Mono',monospace}
+.factor span{font-size:.86rem; color:var(--cyan)}
+.empty{text-align:center; padding:28px; color:var(--dim); border:1px dashed var(--border); border-radius:10px}
+.error{margin-top:10px; color:var(--red); font-family:'Share Tech Mono',monospace; font-size:.8rem}
+.top-actions{display:flex; gap:10px; align-items:center; justify-content:flex-end}
+.top-actions a{color:var(--cyan); text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:.78rem}
+.chart-wrap{height:260px; margin-top:8px}
+.storage-note{margin-top:8px; color:var(--dim); font-family:'Share Tech Mono',monospace; font-size:.72rem}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>VOXGUARD ADMIN FEEDBACK MONITOR</h1>
+    <p>Live feedback intelligence from authentication and verification decisions</p>
+  </div>
+  <div class="top-actions">
+    <a href="/">Back to Main App</a>
+    <div class="user-meta">
+      <span class="pill" id="user-email">NOT SIGNED IN</span>
+      <span class="pill" id="user-role">USER</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid metrics">
+    <div class="card"><div class="metric-label">TOTAL FEEDBACK EVENTS</div><div class="metric-value" id="m-total">0</div></div>
+    <div class="card"><div class="metric-label">SUCCESS RATE</div><div class="metric-value" id="m-success">0%</div></div>
+    <div class="card"><div class="metric-label">FAILED DECISIONS</div><div class="metric-value" id="m-fail">0</div></div>
+    <div class="card"><div class="metric-label">AVERAGE SIMILARITY</div><div class="metric-value" id="m-sim">0.0000</div></div>
+  </div>
+
+  <div class="card">
+    <div class="metric-label">SUCCESS / FAILURE TREND (TIME SERIES)</div>
+    <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+    <div class="storage-note" id="storage-note">Data source: pending</div>
+  </div>
+
+  <div class="card">
+    <div class="filters">
+      <div class="field">
+        <label>ENDPOINT</label>
+        <select id="f-endpoint">
+          <option value="all">All</option>
+          <option value="authenticate">Authenticate</option>
+          <option value="verify">Verify</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>OUTCOME</label>
+        <select id="f-outcome">
+          <option value="all">All</option>
+          <option value="success">Success</option>
+          <option value="failure">Failure</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>USER EMAIL CONTAINS</label>
+        <input id="f-email" placeholder="operator@domain.com" />
+      </div>
+      <div class="field">
+        <label>LIMIT</label>
+        <input id="f-limit" type="number" min="1" max="1000" value="200" />
+      </div>
+      <button class="secondary" id="refresh-btn">Refresh</button>
+      <button class="primary" id="auto-btn">Auto Refresh: OFF</button>
+      <button class="secondary" id="export-btn">Export CSV</button>
+    </div>
+    <div class="error" id="err"></div>
+  </div>
+
+  <div class="list" id="feedback-list"></div>
+</main>
+
+<script type="module">
+import { onUserStateChanged, getCurrentUser } from "/firebase/firebase-auth.js";
+
+const els = {
+  userEmail: document.getElementById('user-email'),
+  userRole: document.getElementById('user-role'),
+  endpoint: document.getElementById('f-endpoint'),
+  outcome: document.getElementById('f-outcome'),
+  email: document.getElementById('f-email'),
+  limit: document.getElementById('f-limit'),
+  refreshBtn: document.getElementById('refresh-btn'),
+  autoBtn: document.getElementById('auto-btn'),
+  err: document.getElementById('err'),
+  list: document.getElementById('feedback-list'),
+  mTotal: document.getElementById('m-total'),
+  mSuccess: document.getElementById('m-success'),
+  mFail: document.getElementById('m-fail'),
+  mSim: document.getElementById('m-sim'),
+  exportBtn: document.getElementById('export-btn'),
+  trendChart: document.getElementById('trend-chart'),
+  storageNote: document.getElementById('storage-note'),
+};
+
+let activeUser = null;
+let autoTimer = null;
+let trendChart = null;
+const tokenCache = { token: null, expMs: 0 };
+
+function parseJwt(token){
+  try {
+    const payloadPart = token.split('.')[1];
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+  } catch (_err) {
+    return {};
+  }
+}
+
+async function getAccessToken(forceRefresh = false){
+  const user = activeUser || await getCurrentUser();
+  if(!user) return null;
+
+  const now = Date.now();
+  if(forceRefresh || !tokenCache.token || (tokenCache.expMs && now > tokenCache.expMs - 45000)){
+    const token = await user.getIdToken(forceRefresh);
+    const parsed = parseJwt(token);
+    tokenCache.token = token;
+    tokenCache.expMs = Number(parsed.exp || 0) * 1000;
+  }
+  return tokenCache.token;
+}
+
+function setError(msg){
+  els.err.textContent = msg || '';
+}
+
+function fmtNumber(value, digits = 4){
+  if(value === null || value === undefined || Number.isNaN(Number(value))) return '-';
+  return Number(value).toFixed(digits);
+}
+
+function renderMetrics(items){
+  const total = items.length;
+  const success = items.filter(x => x.outcome === 'success').length;
+  const fail = items.filter(x => x.outcome === 'failure').length;
+  const avgSim = total ? items.reduce((a,b)=>a + Number(b.similarity || 0), 0) / total : 0;
+
+  els.mTotal.textContent = String(total);
+  els.mSuccess.textContent = total ? `${Math.round((success / total) * 100)}%` : '0%';
+  els.mFail.textContent = String(fail);
+  els.mSim.textContent = fmtNumber(avgSim);
+}
+
+function renderTrend(items){
+  const buckets = new Map();
+  for(const item of items){
+    if(!item.timestamp) continue;
+    const dt = new Date(item.timestamp);
+    if(Number.isNaN(dt.getTime())) continue;
+    const bucketKey = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), dt.getHours(), dt.getMinutes(), 0, 0).toISOString();
+    if(!buckets.has(bucketKey)) buckets.set(bucketKey, { success: 0, failure: 0 });
+    const entry = buckets.get(bucketKey);
+    if(item.outcome === 'success') entry.success += 1;
+    if(item.outcome === 'failure') entry.failure += 1;
+  }
+
+  const sortedKeys = Array.from(buckets.keys()).sort((a,b)=>new Date(a)-new Date(b));
+  const labels = sortedKeys.map(k => {
+    const d = new Date(k);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  });
+  const successSeries = sortedKeys.map(k => buckets.get(k).success);
+  const failureSeries = sortedKeys.map(k => buckets.get(k).failure);
+
+  if(trendChart){
+    trendChart.destroy();
+  }
+
+  trendChart = new Chart(els.trendChart, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Success',
+          data: successSeries,
+          borderColor: '#00ff9d',
+          backgroundColor: 'rgba(0,255,157,.15)',
+          pointRadius: 2,
+          tension: 0.25,
+          fill: true,
+        },
+        {
+          label: 'Failure',
+          data: failureSeries,
+          borderColor: '#ff2d6e',
+          backgroundColor: 'rgba(255,45,110,.12)',
+          pointRadius: 2,
+          tension: 0.25,
+          fill: true,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#bed7f0' } },
+      },
+      scales: {
+        x: { ticks: { color: '#5a7da0' }, grid: { color: 'rgba(90,125,160,.15)' } },
+        y: { beginAtZero: true, ticks: { color: '#5a7da0' }, grid: { color: 'rgba(90,125,160,.15)' } },
+      },
+    }
+  });
+}
+
+function factorCell(label, value){
+  return `<div class="factor"><b>${label}</b><span>${value}</span></div>`;
+}
+
+function renderList(items){
+  if(!items.length){
+    els.list.innerHTML = '<div class="empty">No feedback events found for selected filters.</div>';
+    renderMetrics([]);
+    renderTrend([]);
+    return;
+  }
+
+  renderMetrics(items);
+  renderTrend(items);
+  els.list.innerHTML = items.map(item => {
+    const feedback = item.feedback || {};
+    const factors = feedback.decision_factors || {};
+    const reasons = Array.isArray(feedback.reasons) ? feedback.reasons : [];
+    const nextSteps = Array.isArray(feedback.next_steps) ? feedback.next_steps : [];
+    const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString() : '-';
+    const user = item.user || {};
+
+    return `
+      <div class="feedback-item">
+        <div class="row">
+          <span class="badge endpoint">${String(item.endpoint || '').toUpperCase()}</span>
+          <span class="badge ${item.outcome === 'success' ? 'success' : 'failure'}">${String(item.outcome || 'unknown').toUpperCase()}</span>
+          <span class="badge">${timestamp}</span>
+          <span class="badge">${user.email || 'unknown user'}</span>
+        </div>
+
+        <p class="title">${feedback.summary || 'No summary provided by feedback engine.'}</p>
+        <p class="sub">
+          Claimed: ${item.claimed_speaker || '-'} | Identified: ${item.identified_speaker || '-'} | Closest: ${item.closest_speaker || '-'}
+        </p>
+
+        <div class="section">
+          <h4>Reasons</h4>
+          <ul>${reasons.map(r => `<li>${r}</li>`).join('') || '<li>No reason details available.</li>'}</ul>
+        </div>
+
+        <div class="section">
+          <h4>Recommended Next Steps</h4>
+          <ul>${nextSteps.map(n => `<li>${n}</li>`).join('') || '<li>No next-step guidance available.</li>'}</ul>
+        </div>
+
+        <div class="section">
+          <h4>Decision Factors</h4>
+          <div class="factors">
+            ${factorCell('Similarity', fmtNumber(factors.similarity))}
+            ${factorCell('Threshold', fmtNumber(factors.effective_threshold))}
+            ${factorCell('Threshold Gap', fmtNumber(factors.threshold_gap))}
+            ${factorCell('Margin vs Next', fmtNumber(factors.margin_vs_next))}
+            ${factorCell('Closest Speaker', factors.closest_speaker || '-')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadFeedbacks(){
+  setError('');
+
+  if(!activeUser){
+    renderList([]);
+    setError('Sign in on the main app first.');
+    return;
+  }
+
+  const token = await getAccessToken();
+  if(!token){
+    setError('Unable to get Firebase token.');
+    return;
+  }
+
+  const limit = Math.max(1, Math.min(1000, Number(els.limit.value || 200)));
+  const params = new URLSearchParams({
+    endpoint: els.endpoint.value,
+    outcome: els.outcome.value,
+    user_email: els.email.value.trim(),
+    limit: String(limit),
+  });
+
+  const res = await fetch(`/admin/feedbacks?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if(!res.ok){
+    const payload = await res.json().catch(()=>({detail:'Unknown error'}));
+    setError(`${res.status}: ${payload.detail || 'Failed to load feedbacks'}`);
+    renderList([]);
+    return;
+  }
+
+  const data = await res.json();
+  els.storageNote.textContent = `Data source: ${String(data.storage || 'unknown').toUpperCase()}`;
+  renderList(data.items || []);
+}
+
+async function exportCsv(){
+  setError('');
+  if(!activeUser){
+    setError('Sign in on the main app first.');
+    return;
+  }
+
+  const token = await getAccessToken();
+  if(!token){
+    setError('Unable to get Firebase token.');
+    return;
+  }
+
+  const limit = Math.max(1, Math.min(2000, Number(els.limit.value || 500)));
+  const params = new URLSearchParams({
+    endpoint: els.endpoint.value,
+    outcome: els.outcome.value,
+    user_email: els.email.value.trim(),
+    limit: String(limit),
+  });
+
+  const res = await fetch(`/admin/feedbacks/export.csv?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if(!res.ok){
+    const payload = await res.json().catch(()=>({detail:'Unknown error'}));
+    setError(`${res.status}: ${payload.detail || 'Failed to export CSV'}`);
+    return;
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const downloadLink = document.createElement('a');
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename=([^;]+)/i);
+  const filename = match ? match[1].replace(/"/g, '') : 'voxguard_feedback_audit.csv';
+  downloadLink.href = url;
+  downloadLink.download = filename;
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  downloadLink.remove();
+  URL.revokeObjectURL(url);
+}
+
+function setAutoRefresh(enabled){
+  if(autoTimer){
+    clearInterval(autoTimer);
+    autoTimer = null;
+  }
+  if(enabled){
+    autoTimer = setInterval(loadFeedbacks, 10000);
+  }
+  els.autoBtn.textContent = `Auto Refresh: ${enabled ? 'ON' : 'OFF'}`;
+}
+
+els.refreshBtn.addEventListener('click', loadFeedbacks);
+els.exportBtn.addEventListener('click', exportCsv);
+els.autoBtn.addEventListener('click', () => {
+  const turningOn = !autoTimer;
+  setAutoRefresh(turningOn);
+});
+
+els.endpoint.addEventListener('change', loadFeedbacks);
+els.outcome.addEventListener('change', loadFeedbacks);
+
+let emailDebounce = null;
+els.email.addEventListener('input', () => {
+  clearTimeout(emailDebounce);
+  emailDebounce = setTimeout(loadFeedbacks, 300);
+});
+
+els.limit.addEventListener('change', loadFeedbacks);
+
+await onUserStateChanged(async (user) => {
+  activeUser = user;
+  tokenCache.token = null;
+  tokenCache.expMs = 0;
+
+  if(!user){
+    els.userEmail.textContent = 'NOT SIGNED IN';
+    els.userRole.textContent = 'USER';
+    els.userRole.classList.remove('admin');
+    setError('Sign in from the main page to access admin feedbacks.');
+    renderList([]);
+    return;
+  }
+
+  els.userEmail.textContent = (user.email || user.uid || 'operator').toLowerCase();
+  const token = await getAccessToken(true);
+  const payload = parseJwt(token || '');
+  const role = String(payload.role || 'user').toLowerCase();
+  els.userRole.textContent = role.toUpperCase();
+  els.userRole.classList.toggle('admin', role === 'admin' || role === 'owner');
+
+  await loadFeedbacks();
+});
+</script>
+</body>
+</html>

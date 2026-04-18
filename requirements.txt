@@ -14,3 +14,4 @@ numba>=0.57.0
 resemblyzer>=0.1.1.dev0
 setuptools==69.5.1
 python-dotenv>=1.0.0
+firebase-admin>=6.5.0

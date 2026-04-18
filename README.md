@@ -8,6 +8,9 @@ Speaker identification system using deep learning. Enroll voice profiles and ver
 - Firebase authentication
 - User history tracking
 - Mel-spectrogram analysis with Resemblyzer
+- Detailed decision feedback for authentication and identification
+- Live recording quality monitor (loudness, clip safety, voice activity)
+- Role-based authorization for enrollment (admin-only)
 
 ## Tech Stack
 
@@ -28,3 +31,5 @@ Speaker identification system using deep learning. Enroll voice profiles and ver
 - [API Reference](API_DOCUMENTATION.md)
 - [Firebase Setup](FIREBASE_SETUP.md)
 - [Improvements](IMPROVEMENTS.md)
+- [Setup Guide](SETUP.md)
+- [Project Architecture](PROJECT_STRUCTURE.md)
