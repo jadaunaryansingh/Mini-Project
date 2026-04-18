@@ -339,7 +339,6 @@ async def require_admin(user_context: Dict[str, Any] = Depends(require_authentic
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 resemblyzer_encoder = None
 
-# Load voice database at module level
 voice_db_state = {"voice_db": None, "NUM_CLASSES": None, "resemblyzer_encoder": None, "firebase_admin_ready": False, "firebase_db_ready": False}
 
 try:
@@ -355,14 +354,12 @@ except Exception as e:
 
 @asynccontextmanager
 async def lifespan(app):
-    # Load resemblyzer encoder in lifespan
     try:
         voice_db_state["resemblyzer_encoder"] = VoiceEncoder(device=str(device))
         print(f"[OK] Resemblyzer encoder loaded on {device}")
     except Exception as e:
         print(f"[ERROR] Failed to load resemblyzer encoder: {e}")
-    
-    # Share with app.state
+
     app.state.voice_db = voice_db_state["voice_db"]
     app.state.NUM_CLASSES = voice_db_state["NUM_CLASSES"]
     app.state.resemblyzer_encoder = voice_db_state["resemblyzer_encoder"]
