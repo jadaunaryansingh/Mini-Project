@@ -6,7 +6,7 @@
 <title>VoxGuard — Speaker Verification</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="shortcut icon" href="/favicon.ico"/>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Exo+2:ital,wght@0,200;0,400;0,600;1,300&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1004,6 +1004,96 @@ footer{
 .quality-val{font-family:var(--font-mono);font-size:.7rem;color:var(--c);text-align:right}
 .quality-status{margin-top:12px;font-family:var(--font-mono);font-size:.72rem;color:var(--text)}
 .quality-tip{margin-top:6px;font-family:var(--font-mono);font-size:.7rem;color:var(--a)}
+
+:root{
+  --bg:#f4f7fb;
+  --surface:#ffffff;
+  --card:#ffffff;
+  --border:#dbe6f2;
+  --c:#155eef;
+  --g:#0f9f6e;
+  --v:#5b3cc4;
+  --r:#c03863;
+  --a:#a66e13;
+  --text:#13283f;
+  --dim:#6b8298;
+  --font-hd:'Manrope',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-body:'Manrope',sans-serif;
+}
+
+body{cursor:default}
+
+#cursor,
+#cursor-dot,
+#bg-canvas,
+body::after,
+.ring,
+.logo-icon{display:none !important}
+
+.site-title,
+.site-sub,
+.panel,
+.drop-icon,
+.hud-dot,
+.btn-record.recording,
+.result-status.status-auth,
+.result-status.status-deny,
+.speaker-item,
+.log-line{animation:none !important}
+
+header,
+.panel,
+.result-card,
+.detail-chip,
+.top-matches,
+.speaker-item,
+.log-wrap,
+.waveform-wrap,
+.spec-wrap,
+.drop-zone,
+.quality-card,
+.login-box,
+.modal-box,
+.toast{box-shadow:none !important}
+
+.app{max-width:1140px}
+
+.site-title{
+  background:none;
+  -webkit-text-fill-color:unset;
+  color:#16324a;
+  letter-spacing:.04em;
+  font-weight:800;
+  filter:none;
+}
+
+.site-sub{color:#607c95; letter-spacing:.18em}
+
+.panel,
+.login-box,
+.modal-box,
+.result-card,
+.detail-chip,
+.top-matches{border-radius:12px}
+
+.panel:hover{border-color:#c5d6e8; box-shadow:none}
+
+.btn-primary{background:#155eef; color:#fff}
+
+.btn-record{background:#cc3366; color:#fff}
+
+.btn-modal.enroll{background:#0f9f6e}
+
+.hud-item{color:#607c95}
+
+.drop-zone:hover,.drop-zone.drag-over{background:#f1f6ff; border-color:#9bb8dc}
+
+.admin-link{color:var(--c)}
+.admin-link:hover{border-color:var(--g);color:var(--g)}
+
+.footer,
+footer{color:#6f879f; letter-spacing:.08em}
 </style>
 </head>
 <body>
@@ -1292,7 +1382,7 @@ footer{
 
   </div><!-- /grid -->
 
-  <footer>VOXGUARD v2.0 — DEEP LEARNING SPEAKER VERIFICATION — PYTORCH CNN</footer>
+  <footer>VOXGUARD v2.0 — Voice Verification Platform</footer>
 </div><!-- /app -->
 
 <script>

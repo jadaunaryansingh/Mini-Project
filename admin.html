@@ -5,31 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>VoxGuard Admin - Feedback Monitor</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#020912;
-  --surface:#071327;
-  --card:#0b1932;
-  --border:#13335a;
-  --cyan:#00e5ff;
-  --green:#00ff9d;
-  --amber:#fbbf24;
-  --red:#ff2d6e;
-  --text:#bed7f0;
-  --dim:#5a7da0;
+  --bg:#f3f6fb;
+  --surface:#ffffff;
+  --card:#ffffff;
+  --border:#d8e3ef;
+  --cyan:#155eef;
+  --green:#0f9f6e;
+  --amber:#a66e13;
+  --red:#c03863;
+  --text:#13283f;
+  --dim:#6b8298;
 }
 *{box-sizing:border-box}
 body{
   margin:0;
   min-height:100vh;
-  font-family:'Exo 2',sans-serif;
+  font-family:'Manrope',sans-serif;
   color:var(--text);
-  background:
-    radial-gradient(1200px 500px at 80% -20%, #0d2850 0%, transparent 55%),
-    radial-gradient(1000px 500px at -10% 0%, #0b2f3d 0%, transparent 50%),
-    var(--bg);
+  background:var(--bg);
 }
 header{
   padding:24px 28px;
@@ -41,27 +38,26 @@ header{
   position:sticky;
   top:0;
   z-index:5;
-  backdrop-filter:blur(6px);
-  background:rgba(2,9,18,.85);
+  background:#f8fbff;
 }
 .brand h1{
   margin:0;
-  font-family:'Orbitron',sans-serif;
-  letter-spacing:.12em;
-  font-size:1.2rem;
-  color:var(--cyan);
+  font-family:'Manrope',sans-serif;
+  letter-spacing:.04em;
+  font-size:1.12rem;
+  color:#16324a;
 }
 .brand p{
   margin:6px 0 0;
   color:var(--dim);
-  font-family:'Share Tech Mono',monospace;
+  font-family:'IBM Plex Mono',monospace;
   font-size:.78rem;
 }
 .user-meta{
   display:flex;
   align-items:center;
   gap:10px;
-  font-family:'Share Tech Mono',monospace;
+  font-family:'IBM Plex Mono',monospace;
   font-size:.72rem;
 }
 .pill{
@@ -80,8 +76,8 @@ main{padding:20px 28px 34px; max-width:1320px; margin:0 auto}
   border-radius:12px;
   padding:16px;
 }
-.metric-label{font-family:'Share Tech Mono',monospace; color:var(--dim); font-size:.72rem; letter-spacing:.1em}
-.metric-value{margin-top:8px; font-family:'Orbitron',sans-serif; font-size:1.5rem; color:var(--cyan)}
+.metric-label{font-family:'IBM Plex Mono',monospace; color:var(--dim); font-size:.72rem; letter-spacing:.1em}
+.metric-value{margin-top:8px; font-family:'Manrope',sans-serif; font-weight:800; font-size:1.5rem; color:var(--cyan)}
 .filters{
   display:grid;
   grid-template-columns: 170px 170px 1fr 110px 120px 130px 130px;
@@ -96,7 +92,7 @@ main{padding:20px 28px 34px; max-width:1320px; margin:0 auto}
   margin-bottom:6px;
   color:var(--dim);
   font-size:.68rem;
-  font-family:'Share Tech Mono',monospace;
+  font-family:'IBM Plex Mono',monospace;
   letter-spacing:.1em;
 }
 .field input,.field select,button{
@@ -106,12 +102,12 @@ main{padding:20px 28px 34px; max-width:1320px; margin:0 auto}
   color:var(--text);
   border-radius:8px;
   padding:10px 12px;
-  font-family:'Share Tech Mono',monospace;
+  font-family:'IBM Plex Mono',monospace;
 }
 button{cursor:pointer}
 button.primary{
-  background:linear-gradient(135deg,#0f4364,#0a7ea8);
-  border-color:#0c99c9;
+  background:#155eef;
+  border-color:#155eef;
 }
 button.secondary{
   background:var(--surface);
@@ -125,32 +121,32 @@ button:disabled{opacity:.5; cursor:not-allowed}
   background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
 }
 .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-.badge{font-family:'Share Tech Mono',monospace; font-size:.65rem; padding:4px 8px; border-radius:999px; border:1px solid var(--border); color:var(--dim)}
+.badge{font-family:'IBM Plex Mono',monospace; font-size:.65rem; padding:4px 8px; border-radius:999px; border:1px solid var(--border); color:var(--dim)}
 .badge.success{border-color:#1a8a5f; color:var(--green)}
 .badge.failure{border-color:#8a1a47; color:var(--red)}
 .badge.endpoint{color:var(--cyan); border-color:#0d6c8f}
 .title{margin:10px 0 0; font-weight:700; color:var(--text)}
 .sub{margin:8px 0 0; color:var(--dim); font-size:.84rem}
 .section{margin-top:12px}
-.section h4{margin:0 0 8px; font-size:.8rem; color:var(--amber); font-family:'Share Tech Mono',monospace; letter-spacing:.06em}
+.section h4{margin:0 0 8px; font-size:.8rem; color:var(--amber); font-family:'IBM Plex Mono',monospace; letter-spacing:.06em}
 .section ul{margin:0; padding-left:18px; color:var(--text); font-size:.86rem}
 .factors{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px}
 .factor{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px}
-.factor b{display:block; color:var(--dim); font-size:.7rem; font-family:'Share Tech Mono',monospace}
+.factor b{display:block; color:var(--dim); font-size:.7rem; font-family:'IBM Plex Mono',monospace}
 .factor span{font-size:.86rem; color:var(--cyan)}
 .empty{text-align:center; padding:28px; color:var(--dim); border:1px dashed var(--border); border-radius:10px}
-.error{margin-top:10px; color:var(--red); font-family:'Share Tech Mono',monospace; font-size:.8rem}
+.error{margin-top:10px; color:var(--red); font-family:'IBM Plex Mono',monospace; font-size:.8rem}
 .top-actions{display:flex; gap:10px; align-items:center; justify-content:flex-end}
-.top-actions a{color:var(--cyan); text-decoration:none; font-family:'Share Tech Mono',monospace; font-size:.78rem}
+.top-actions a{color:var(--cyan); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:.78rem}
 .chart-wrap{height:260px; margin-top:8px}
-.storage-note{margin-top:8px; color:var(--dim); font-family:'Share Tech Mono',monospace; font-size:.72rem}
+.storage-note{margin-top:8px; color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:.72rem}
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <h1>VOXGUARD ADMIN FEEDBACK MONITOR</h1>
-    <p>Live feedback intelligence from authentication and verification decisions</p>
+    <h1>VoxGuard Admin Feedback Monitor</h1>
+    <p>Operational view of authentication and verification feedback</p>
   </div>
   <div class="top-actions">
     <a href="/">Back to Main App</a>
